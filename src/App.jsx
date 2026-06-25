@@ -416,25 +416,21 @@ function ScanModal({ students, onClose, onSave }) {
     if (!image || !words.length) return;
     setAnalyzing(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.data } },
-              { type: "text", text: `Vocabulary exam paper. Each word has a checkbox: FILLED/HATCHED = WRONG. EMPTY = CORRECT.\n\nWords in order:\n${words.map((w, i) => `${i+1}. ${w}`).join("\n")}\n\nRespond ONLY with JSON: {"word": true/false, ...} where true=correct(empty box), false=wrong(filled). Use exact word strings as keys. No other text.` }
-            ]
-          }]
+          imageData: image.data,
+          mediaType: image.mediaType,
+          words,
         })
       });
       const data = await res.json();
-      const text = data.content?.find(c => c.type === "text")?.text || "{}";
-      const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setResults(parsed);
+      if (data.result) {
+        setResults(data.result);
+      } else {
+        throw new Error("No result");
+      }
     } catch {
       const init = {};
       words.forEach(w => init[w] = true);
